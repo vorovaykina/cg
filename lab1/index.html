@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Цветовой Конвертер</title>
+    <link rel="stylesheet" href='style.css'/>
+</head>
+<body>
+    <h1>Цветовой Конвертер: CMYK – RGB – HSV</h1>
+
+    <div class="container">
+        <div
+            class="color-box"
+            id="rgb-box"
+            style="background-color: rgb(255, 0, 0)"
+        >
+            RGB
+        </div>
+        <div
+            class="color-box"
+            id="cmyk-box"
+            style="background-color: rgba(0, 255, 255, 0)"
+        >
+            CMYK
+        </div>
+        <div
+            class="color-box"
+            id="hsv-box" 
+            style="background-color: rgb(255, 0, 0)"
+        >
+            HSV 
+        </div>
+    </div>
+
+    <div class="color-picker">
+        <label for="color">Choose a color:</label>
+        <input type="color" id="color" value="#000000">
+    </div>
+
+    <div class="color-models">
+        <div class="model">
+            <h2>RGB</h2>
+            <label for="r">R:</label>
+            <input type="number" id="r" min="0" max="255" value="0">
+            <input type="range" id="r-range" min="0" max="255" value="0">
+            <label for="g">G:</label>
+            <input type="number" id="g" min="0" max="255" value="0">
+            <input type="range" id="g-range" min="0" max="255" value="0">
+            <label for="b">B:</label>
+            <input type="number" id="b" min="0" max="255" value="0">
+            <input type="range" id="b-range" min="0" max="255" value="0">
+        </div>  
+        <div class="model">
+            <h2>CMYK</h2>
+            <label for="c">C:</label>
+            <input type="number" id="c" min="0" max="100" value="0">
+            <input type="range" id="c-range" min="0" max="100" value="0">
+            <label for="m">M:</label>
+            <input type="number" id="m" min="0" max="100" value="0">
+            <input type="range" id="m-range" min="0" max="100" value="0">
+            <label for="y">Y:</label>
+            <input type="number" id="y" min="0" max="100" value="0">
+            <input type="range" id="y-range" min="0" max="100" value="0">
+            <label for="k">K:</label>
+            <input type="number" id="k" min="0" max="100" value="0">
+            <input type="range" id="k-range" min="0" max="100" value="0">
+        </div>
+        <div class="model">
+            <h2>HSV</h2> 
+            <label for="h">H:</label>
+            <input type="number" id="h" min="0" max="360" value="0">
+            <input type="range" id="h-range" min="0" max="360" value="0">
+            <label for="s">S:</label>
+            <input type="number" id="s" min="0" max="100" value="0">
+            <input type="range" id="s-range" min="0" max="100" value="0">
+            <label for="v">V:</label> 
+            <input type="number" id="v" min="0" max="100" value="0"> 
+            <input type="range" id="v-range" min="0" max="100" value="0"> 
+        </div>
+    </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
