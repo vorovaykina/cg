@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Глобальная пороговая обработка и Нелинейные фильтры</h1>
+        <input type="file" id="imageUpload" accept="image/*">
+        <canvas id="imageCanvas"></canvas>
+        
+        <div class="controls">
+            <button onclick="applyThreshold('simple')">Простой порог</button>
+            <button onclick="applyThreshold('otsu')">Метод Оцу</button>
+            <button onclick="applyFilter('median')">Медианный фильтр</button>
+            <button onclick="applyFilter('max')">Фильтр максимума</button>
+            <button onclick="resetImage()">Сбросить</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
