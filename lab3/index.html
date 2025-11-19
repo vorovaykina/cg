@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Базовые растровые алгоритмы</title>
+    <link rel="stylesheet" href="./style.css"/>
+</head>
+<body>
+
+<div id="main-container">
+    <div id="container">
+        <div id="canvas-container">
+            <h2>Базовые растровые алгоритмы</h2>
+            <canvas id="canvas" width="600" height="400"></canvas>
+            <div id="controls">
+                <div>
+                    <label for="algorithm">Выберите алгоритм:</label>
+                    <select id="algorithm" onchange="updateInput(); output.innerHTML = ''; drawGrid();">
+                        <option value="step">пошаговый алгоритм</option>
+                        <option value="dda">алгоритм ЦДА</option>
+                        <option value="bresenham">алгоритм Брезенхема</option>
+                        <option value="bresenhamCircle">алгоритм Брезенхема (окружность)</option>
+                    </select>
+                    <button id="drawButton" onclick="numberOfClicks++; draw();">Рисовать</button>
+                </div>
+
+                <div>
+                    <div id="lines" style="display: none;">
+                        <div>
+                            <label for="startX">x0:</label>
+                            <input type="number" id="startX" value="0">
+                            <label for="startY">y0:</label>
+                            <input type="number" id="startY" value="0">
+                        </div>
+                        <div>
+                            <label for="endX">x1:</label>
+                            <input type="number" id="endX" value="0">
+                            <label for="endY">y1:</label>
+                            <input type="number" id="endY" value="0">
+                        </div>
+                    </div>
+
+                    <div id="circles" style="display: none;">
+                        <label for="centerX">x0:</label>
+                        <input type="number" id="centerX" value="0">
+                        <label for="centerY">y0:</label>
+                        <input type="number" id="centerY" value="0">
+                        <label for="radius">r:</label>
+                        <input type="number" id="radius" value="0">
+                    </div>
+                </div>
+
+                <div class="scale-control">
+                    <label for="scale">Масштаб:</label>
+                    <input type="range" id="scale" min="10" max="100" value="30" oninput="updateScale()">
+                    <span id="scaleValue" class="scale-value">30</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="output-container">
+            <h2>Шаги алгоритма</h2>
+            <div id="output">Вы ещё ничего не нарисовали, но вы можете это исправить!</div>
+        </div>
+    </div>
+</div>
+<script src="./script.js"></script>
+</body>
+</html>
