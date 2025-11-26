@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Алгоритмы отсечения</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            margin-top: 20px;
+        }
+        .controls {
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .info {
+            margin-top: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .sidebar {
+            float: left;
+            margin-right: 20px;
+        }
+        .canvas-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+<h1>Демонстрация алгоритмов отсечения</h1>
+<div class="controls">
+    <label for="segmentsInput">Введите данные отрезков:</label><br>
+    <textarea id="segmentsInput" rows="10" cols="50" placeholder="Введите данные в формате:\nЧисло отрезков\nX1_1 Y1_1 X2_1 Y2_1\nX1_2 Y1_2 X2_2 Y2_2\n...\nXmin Ymin Xmax Ymax или координаты выпуклого многоугольника"></textarea><br>
+    <label for="algorithmSelect">Выберите алгоритм:</label>
+    <select id="algorithmSelect">
+        <option value="liangBarsky">Алгоритм Лианга-Барски</option>
+        <option value="polygonClipping">Отсечение выпуклым многоугольником</option>
+    </select><br>
+    <button id="processData">Обработать данные</button>
+</div>
+
+<div class="canvas-container">
+    <div class="sidebar">
+        <h3>Пояснение:</h3>
+        <div class="info">
+            <p><strong>Алгоритм Лианга-Барски (Прямоугольное окно):</strong></p>
+            <p><span style="color:blue;">Синие отрезки</span> — исходные отрезки, которые могут выходить за пределы окна.</p>
+            <p><span style="color:green;">Зеленые отрезки</span> — это только те части синих отрезков, которые пересекаются с прямоугольным окном.</p>
+            <p><strong>Алгоритм отсечения многоугольником:</strong></p>
+            <p><span style="color:blue;">Синие отрезки</span> — все начальные отрезки, которые вы ввели.</p>
+            <p><span style="color:green;">Зеленые отрезки</span> — это те части синих отрезков, которые лежат внутри многоугольника и не выходят за его границы.</p>
+        </div>
+    </div>
+
+    <canvas id="canvas" width="800" height="600"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let segments = [];
+    let clippingWindow = {};
+
+    // Отрисовка координатной системы
+    function drawCoordinateSystem() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#ccc';
+
+        // Вертикальные линии
+        for (let x = 0; x <= canvas.width; x += 50) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
+        }
+
+        // Горизонтальные линии
+        for (let y = 0; y <= canvas.height; y += 50) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#000';
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, 0);
+        ctx.lineTo(canvas.width / 2, canvas.height);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height / 2);
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+    }
+
+    // Отрисовка отрезков
+    function drawSegments(segments, color = 'blue') {
+        ctx.strokeStyle = color;
+        for (const [x1, y1, x2, y2] of segments) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+    }
+
+    // Отрисовка окна отсечения
+    function drawClippingWindow(window, color = 'red') {
+        if (window.xmin !== undefined) {
+            const { xmin, ymin, xmax, ymax } = window;
+            ctx.strokeStyle = color;
+            ctx.strokeRect(xmin, ymin, xmax - xmin, ymax - ymin);
+        } else if (window.polygon) {
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            const [first, ...rest] = window.polygon;
+            ctx.moveTo(first[0], first[1]);
+            for (const [x, y] of rest) {
+                ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+    }
+
+    // Рисование многоугольника
+    function drawPolygon(polygon, color = 'blue') {
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        const [first, ...rest] = polygon;
+        ctx.moveTo(first[0], first[1]);
+        for (const [x, y] of rest) {
+            ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    // Алгоритм Лианга-Барски
+    function liangBarsky(x1, y1, x2, y2, xmin, ymin, xmax, ymax) {
+        let t0 = 0, t1 = 1;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const p = [-dx, dx, -dy, dy];
+        const q = [x1 - xmin, xmax - x1, y1 - ymin, ymax - y1];
+
+        for (let i = 0; i < 4; i++) {
+            if (p[i] === 0 && q[i] < 0) return null; // Полностью вне окна
+            const r = q[i] / p[i];
+            if (p[i] < 0) t0 = Math.max(t0, r);
+            else if (p[i] > 0) t1 = Math.min(t1, r);
+        }
+
+        if (t0 > t1) return null; // Не видно
+
+        // Рассчитываем новые координаты отрезка
+        const nx1 = x1 + t0 * dx;
+        const ny1 = y1 + t0 * dy;
+        const nx2 = x1 + t1 * dx;
+        const ny2 = y1 + t1 * dy;
+
+        return [nx1, ny1, nx2, ny2];
+    }
+
+    // Алгоритм отсечения отрезков выпуклым многоугольником
+    function polygonClipping(x1, y1, x2, y2, polygon) {
+        let t0 = 0, t1 = 1;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+
+        for (let i = 0; i < polygon.length; i++) {
+            const [xEdge1, yEdge1] = polygon[i];
+            const [xEdge2, yEdge2] = polygon[(i + 1) % polygon.length];
+            const edgeDx = xEdge2 - xEdge1;
+            const edgeDy = yEdge2 - yEdge1;
+            const normalX = -edgeDy;
+            const normalY = edgeDx;
+            const wx = x1 - xEdge1;
+            const wy = y1 - yEdge1;
+            const denom = normalX * dx + normalY * dy;
+            const num = -(normalX * wx + normalY * wy);
+
+            if (denom === 0) {
+                if (num < 0) return null; // Вне многоугольника
+            } else {
+                const t = num / denom;
+                if (denom < 0) t0 = Math.max(t0, t);
+                else t1 = Math.min(t1, t);
+            }
+        }
+
+        if (t0 > t1) return null; // Не видно
+
+        // Рассчитываем новые координаты отрезка
+        const nx1 = x1 + t0 * dx;
+        const ny1 = y1 + t0 * dy;
+        const nx2 = x1 + t1 * dx;
+        const ny2 = y1 + t1 * dy;
+
+        return [nx1, ny1, nx2, ny2];
+    }
+
+    // Обработка введенных данных
+    document.getElementById('processData').addEventListener('click', () => {
+        const inputData = document.getElementById('segmentsInput').value;
+        const lines = inputData.trim().split('\n');
+
+        // Чтение числа отрезков
+        const n = parseInt(lines[0], 10);
+        segments = lines.slice(1, n + 1).map(line => line.split(' ').map(Number));
+
+        // Чтение окна отсечения
+        const algorithm = document.getElementById('algorithmSelect').value;
+        let clippedSegments = [];
+
+        if (algorithm === 'liangBarsky') {
+            const [xmin, ymin, xmax, ymax] = lines[n + 1].split(' ').map(Number);
+            clippingWindow = { xmin, ymin, xmax, ymax };
+            drawClippingWindow(clippingWindow, 'red');
+            clippedSegments = segments.map(([x1, y1, x2, y2]) =>
+                liangBarsky(x1, y1, x2, y2, xmin, ymin, xmax, ymax)
+            ).filter(s => s);
+        } else if (algorithm === 'polygonClipping') {
+            const polygon = lines.slice(n + 1).map(line => line.split(' ').map(Number));
+            clippingWindow = { polygon };
+            drawPolygon(polygon, 'blue');
+            clippedSegments = segments.map(([x1, y1, x2, y2]) =>
+                polygonClipping(x1, y1, x2, y2, polygon)
+            ).filter(s => s);
+        }
+
+        // Отображение данных
+        drawCoordinateSystem();
+        drawSegments(segments);
+        drawSegments(clippedSegments, 'green');
+    });
+
+    drawCoordinateSystem();
+</script>
+</body>
+</html>
