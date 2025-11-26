@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,23 +22,49 @@
         .sidebar {
             float: left;
             margin-right: 20px;
+            width: 300px;
         }
         .canvas-container {
             position: relative;
+        }
+        .examples {
+            margin-top: 10px;
+        }
+        .example-btn {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .input-group {
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 <h1>Демонстрация алгоритмов отсечения</h1>
+
 <div class="controls">
-    <label for="segmentsInput">Введите данные отрезков:</label><br>
-    <textarea id="segmentsInput" rows="10" cols="50" placeholder="Введите данные в формате:\nЧисло отрезков\nX1_1 Y1_1 X2_1 Y2_1\nX1_2 Y1_2 X2_2 Y2_2\n...\nXmin Ymin Xmax Ymax или координаты выпуклого многоугольника"></textarea><br>
-    <label for="algorithmSelect">Выберите алгоритм:</label>
-    <select id="algorithmSelect">
-        <option value="liangBarsky">Алгоритм Лианга-Барски</option>
-        <option value="polygonClipping">Отсечение выпуклым многоугольником</option>
-    </select><br>
+    <div class="input-group">
+        <label for="algorithmSelect">Выберите алгоритм:</label>
+        <select id="algorithmSelect">
+            <option value="liangBarsky">Алгоритм Лианга-Барски</option>
+            <option value="polygonClipping">Отсечение выпуклым многоугольником</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label for="segmentsInput">Введите данные отрезков:</label><br>
+        <textarea id="segmentsInput" rows="10" cols="50" placeholder="Введите данные в формате..."></textarea>
+    </div>
+
+    <div class="examples">
+        <strong>Примеры ввода:</strong><br>
+        <button class="example-btn" onclick="loadExample('liangBarsky')">Пример для Лианга-Барски</button>
+        <button class="example-btn" onclick="loadExample('polygonClipping')">Пример для многоугольника</button>
+    </div>
+
     <button id="processData">Обработать данные</button>
+    <button id="clearCanvas">Очистить</button>
 </div>
 
 <div class="canvas-container">
@@ -46,12 +72,16 @@
         <h3>Пояснение:</h3>
         <div class="info">
             <p><strong>Алгоритм Лианга-Барски (Прямоугольное окно):</strong></p>
-            <p><span style="color:blue;">Синие отрезки</span> — исходные отрезки, которые могут выходить за пределы окна.</p>
-            <p><span style="color:green;">Зеленые отрезки</span> — это только те части синих отрезков, которые пересекаются с прямоугольным окном.</p>
+            <p><span style="color:blue;">Синие отрезки</span> — исходные отрезки</p>
+            <p><span style="color:green;">Зеленые отрезки</span> — видимые части</p>
+            <p><span style="color:red;">Красный прямоугольник</span> — окно отсечения</p>
+            
             <p><strong>Алгоритм отсечения многоугольником:</strong></p>
-            <p><span style="color:blue;">Синие отрезки</span> — все начальные отрезки, которые вы ввели.</p>
-            <p><span style="color:green;">Зеленые отрезки</span> — это те части синих отрезков, которые лежат внутри многоугольника и не выходят за его границы.</p>
+            <p><span style="color:blue;">Синие отрезки</span> — исходные отрезки</p>
+            <p><span style="color:green;">Зеленые отрезки</span> — видимые части</p>
+            <p><span style="color:red;">Красный многоугольник</span> — окно отсечения</p>
         </div>
+        <div id="status"></div>
     </div>
 
     <canvas id="canvas" width="800" height="600"></canvas>
@@ -60,14 +90,53 @@
 <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const statusDiv = document.getElementById('status');
 
     let segments = [];
     let clippingWindow = {};
 
+    // Примеры данных
+    const examples = {
+        liangBarsky: `5
+100 100 300 300
+50 200 400 200
+150 50 150 400
+400 100 100 400
+250 50 250 350
+200 150 500 350`,
+
+        polygonClipping: `3
+200 300 600 300
+300 100 300 500
+400 200 400 400
+250 250
+550 250
+550 350
+250 350`
+    };
+
+    function loadExample(algorithm) {
+        document.getElementById('algorithmSelect').value = algorithm;
+        document.getElementById('segmentsInput').value = examples[algorithm];
+        updatePlaceholder();
+    }
+
+    function updatePlaceholder() {
+        const algorithm = document.getElementById('algorithmSelect').value;
+        const textarea = document.getElementById('segmentsInput');
+        
+        if (algorithm === 'liangBarsky') {
+            textarea.placeholder = 'Введите данные в формате:\nЧисло отрезков\nX1_1 Y1_1 X2_1 Y2_1\n...\nXmin Ymin Xmax Ymax';
+        } else {
+            textarea.placeholder = 'Введите данные в формате:\nЧисло отрезков\nX1_1 Y1_1 X2_1 Y2_1\n...\nX1 Y1 (вершины многоугольника)\nX2 Y2\n...';
+        }
+    }
+
     // Отрисовка координатной системы
     function drawCoordinateSystem() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#ccc';
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
 
         // Вертикальные линии
         for (let x = 0; x <= canvas.width; x += 50) {
@@ -84,38 +153,32 @@
             ctx.lineTo(canvas.width, y);
             ctx.stroke();
         }
-
-        ctx.strokeStyle = '#000';
-        ctx.beginPath();
-        ctx.moveTo(canvas.width / 2, 0);
-        ctx.lineTo(canvas.width / 2, canvas.height);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(0, canvas.height / 2);
-        ctx.lineTo(canvas.width, canvas.height / 2);
-        ctx.stroke();
     }
 
     // Отрисовка отрезков
-    function drawSegments(segments, color = 'blue') {
+    function drawSegments(segments, color = 'blue', lineWidth = 2) {
         ctx.strokeStyle = color;
-        for (const [x1, y1, x2, y2] of segments) {
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
+        ctx.lineWidth = lineWidth;
+        for (const segment of segments) {
+            if (segment && segment.length === 4) {
+                const [x1, y1, x2, y2] = segment;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
         }
     }
 
     // Отрисовка окна отсечения
     function drawClippingWindow(window, color = 'red') {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        
         if (window.xmin !== undefined) {
             const { xmin, ymin, xmax, ymax } = window;
-            ctx.strokeStyle = color;
             ctx.strokeRect(xmin, ymin, xmax - xmin, ymax - ymin);
         } else if (window.polygon) {
-            ctx.strokeStyle = color;
             ctx.beginPath();
             const [first, ...rest] = window.polygon;
             ctx.moveTo(first[0], first[1]);
@@ -127,19 +190,6 @@
         }
     }
 
-    // Рисование многоугольника
-    function drawPolygon(polygon, color = 'blue') {
-        ctx.strokeStyle = color;
-        ctx.beginPath();
-        const [first, ...rest] = polygon;
-        ctx.moveTo(first[0], first[1]);
-        for (const [x, y] of rest) {
-            ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.stroke();
-    }
-
     // Алгоритм Лианга-Барски
     function liangBarsky(x1, y1, x2, y2, xmin, ymin, xmax, ymax) {
         let t0 = 0, t1 = 1;
@@ -149,15 +199,20 @@
         const q = [x1 - xmin, xmax - x1, y1 - ymin, ymax - y1];
 
         for (let i = 0; i < 4; i++) {
-            if (p[i] === 0 && q[i] < 0) return null; // Полностью вне окна
+            if (p[i] === 0) {
+                if (q[i] < 0) return null;
+                continue;
+            }
             const r = q[i] / p[i];
-            if (p[i] < 0) t0 = Math.max(t0, r);
-            else if (p[i] > 0) t1 = Math.min(t1, r);
+            if (p[i] < 0) {
+                t0 = Math.max(t0, r);
+            } else {
+                t1 = Math.min(t1, r);
+            }
         }
 
-        if (t0 > t1) return null; // Не видно
+        if (t0 > t1) return null;
 
-        // Рассчитываем новые координаты отрезка
         const nx1 = x1 + t0 * dx;
         const ny1 = y1 + t0 * dy;
         const nx2 = x1 + t1 * dx;
@@ -166,79 +221,178 @@
         return [nx1, ny1, nx2, ny2];
     }
 
-    // Алгоритм отсечения отрезков выпуклым многоугольником
+    // Упрощенный алгоритм отсечения многоугольником (работающий вариант)
     function polygonClipping(x1, y1, x2, y2, polygon) {
-        let t0 = 0, t1 = 1;
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-
+        // Список точек пересечения
+        const intersections = [];
+        
+        // Проверяем начальную и конечную точки
+        if (isPointInsidePolygon(x1, y1, polygon)) {
+            intersections.push({x: x1, y: y1, t: 0});
+        }
+        if (isPointInsidePolygon(x2, y2, polygon)) {
+            intersections.push({x: x2, y: y2, t: 1});
+        }
+        
+        // Ищем пересечения с ребрами многоугольника
         for (let i = 0; i < polygon.length; i++) {
-            const [xEdge1, yEdge1] = polygon[i];
-            const [xEdge2, yEdge2] = polygon[(i + 1) % polygon.length];
-            const edgeDx = xEdge2 - xEdge1;
-            const edgeDy = yEdge2 - yEdge1;
-            const normalX = -edgeDy;
-            const normalY = edgeDx;
-            const wx = x1 - xEdge1;
-            const wy = y1 - yEdge1;
-            const denom = normalX * dx + normalY * dy;
-            const num = -(normalX * wx + normalY * wy);
-
-            if (denom === 0) {
-                if (num < 0) return null; // Вне многоугольника
-            } else {
-                const t = num / denom;
-                if (denom < 0) t0 = Math.max(t0, t);
-                else t1 = Math.min(t1, t);
+            const p1 = polygon[i];
+            const p2 = polygon[(i + 1) % polygon.length];
+            
+            const intersection = getLineIntersection(
+                x1, y1, x2, y2,
+                p1[0], p1[1], p2[0], p2[1]
+            );
+            
+            if (intersection) {
+                intersections.push(intersection);
             }
         }
+        
+        // Сортируем точки по параметру t
+        intersections.sort((a, b) => a.t - b.t);
+        
+        // Если есть 2 точки пересечения - возвращаем отрезок между ними
+        if (intersections.length >= 2) {
+            return [
+                intersections[0].x, intersections[0].y,
+                intersections[intersections.length - 1].x, intersections[intersections.length - 1].y
+            ];
+        }
+        
+        return null;
+    }
 
-        if (t0 > t1) return null; // Не видно
+    // Проверка точки внутри многоугольника (алгоритм ray casting)
+    function isPointInsidePolygon(x, y, polygon) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i][0], yi = polygon[i][1];
+            const xj = polygon[j][0], yj = polygon[j][1];
+            
+            const intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
 
-        // Рассчитываем новые координаты отрезка
-        const nx1 = x1 + t0 * dx;
-        const ny1 = y1 + t0 * dy;
-        const nx2 = x1 + t1 * dx;
-        const ny2 = y1 + t1 * dy;
-
-        return [nx1, ny1, nx2, ny2];
+    // Нахождение пересечения двух отрезков
+    function getLineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
+        const denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+        if (Math.abs(denominator) < 0.0001) return null;
+        
+        const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
+        const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator;
+        
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+            return {
+                x: x1 + t * (x2 - x1),
+                y: y1 + t * (y2 - y1),
+                t: t
+            };
+        }
+        return null;
     }
 
     // Обработка введенных данных
     document.getElementById('processData').addEventListener('click', () => {
-        const inputData = document.getElementById('segmentsInput').value;
-        const lines = inputData.trim().split('\n');
+        try {
+            const inputData = document.getElementById('segmentsInput').value.trim();
+            if (!inputData) {
+                statusDiv.innerHTML = '<span style="color:red;">Ошибка: Введите данные</span>';
+                return;
+            }
 
-        // Чтение числа отрезков
-        const n = parseInt(lines[0], 10);
-        segments = lines.slice(1, n + 1).map(line => line.split(' ').map(Number));
+            const lines = inputData.split('\n').filter(line => line.trim() !== '');
+            
+            // Чтение числа отрезков
+            const n = parseInt(lines[0], 10);
+            if (isNaN(n) || n <= 0) {
+                statusDiv.innerHTML = '<span style="color:red;">Ошибка: Неверное число отрезков</span>';
+                return;
+            }
 
-        // Чтение окна отсечения
-        const algorithm = document.getElementById('algorithmSelect').value;
-        let clippedSegments = [];
+            segments = [];
+            for (let i = 1; i <= n; i++) {
+                if (i >= lines.length) break;
+                const coords = lines[i].trim().split(/\s+/).map(Number);
+                if (coords.length === 4) {
+                    segments.push(coords);
+                }
+            }
 
-        if (algorithm === 'liangBarsky') {
-            const [xmin, ymin, xmax, ymax] = lines[n + 1].split(' ').map(Number);
-            clippingWindow = { xmin, ymin, xmax, ymax };
+            const algorithm = document.getElementById('algorithmSelect').value;
+            let clippedSegments = [];
+
+            if (algorithm === 'liangBarsky') {
+                if (lines.length <= n + 1) {
+                    statusDiv.innerHTML = '<span style="color:red;">Ошибка: Недостаточно данных для окна</span>';
+                    return;
+                }
+                const windowCoords = lines[n + 1].trim().split(/\s+/).map(Number);
+                if (windowCoords.length !== 4) {
+                    statusDiv.innerHTML = '<span style="color:red;">Ошибка: Неверные координаты окна</span>';
+                    return;
+                }
+                const [xmin, ymin, xmax, ymax] = windowCoords;
+                clippingWindow = { xmin, ymin, xmax, ymax };
+                
+                clippedSegments = segments.map(([x1, y1, x2, y2]) =>
+                    liangBarsky(x1, y1, x2, y2, xmin, ymin, xmax, ymax)
+                ).filter(s => s !== null);
+                
+                statusDiv.innerHTML = `Отрезков: ${segments.length}, Видимых: ${clippedSegments.length}`;
+                
+            } else if (algorithm === 'polygonClipping') {
+                if (lines.length <= n + 1) {
+                    statusDiv.innerHTML = '<span style="color:red;">Ошибка: Недостаточно данных для многоугольника</span>';
+                    return;
+                }
+                const polygon = [];
+                for (let i = n + 1; i < lines.length; i++) {
+                    const coords = lines[i].trim().split(/\s+/).map(Number);
+                    if (coords.length === 2) {
+                        polygon.push(coords);
+                    }
+                }
+                if (polygon.length < 3) {
+                    statusDiv.innerHTML = '<span style="color:red;">Ошибка: Многоугольник должен иметь минимум 3 вершины</span>';
+                    return;
+                }
+                clippingWindow = { polygon };
+                
+                clippedSegments = segments.map(([x1, y1, x2, y2]) =>
+                    polygonClipping(x1, y1, x2, y2, polygon)
+                ).filter(s => s !== null);
+                
+                statusDiv.innerHTML = `Отрезков: ${segments.length}, Видимых: ${clippedSegments.length}, Вершин многоугольника: ${polygon.length}`;
+            }
+
+            // Отображение данных
+            drawCoordinateSystem();
             drawClippingWindow(clippingWindow, 'red');
-            clippedSegments = segments.map(([x1, y1, x2, y2]) =>
-                liangBarsky(x1, y1, x2, y2, xmin, ymin, xmax, ymax)
-            ).filter(s => s);
-        } else if (algorithm === 'polygonClipping') {
-            const polygon = lines.slice(n + 1).map(line => line.split(' ').map(Number));
-            clippingWindow = { polygon };
-            drawPolygon(polygon, 'blue');
-            clippedSegments = segments.map(([x1, y1, x2, y2]) =>
-                polygonClipping(x1, y1, x2, y2, polygon)
-            ).filter(s => s);
-        }
+            drawSegments(segments, 'blue', 3);
+            drawSegments(clippedSegments, 'green', 4);
 
-        // Отображение данных
-        drawCoordinateSystem();
-        drawSegments(segments);
-        drawSegments(clippedSegments, 'green');
+        } catch (error) {
+            statusDiv.innerHTML = `<span style="color:red;">Ошибка: ${error.message}</span>`;
+            console.error(error);
+        }
     });
 
+    document.getElementById('clearCanvas').addEventListener('click', () => {
+        drawCoordinateSystem();
+        segments = [];
+        clippingWindow = {};
+        statusDiv.innerHTML = '';
+        document.getElementById('segmentsInput').value = '';
+    });
+
+    document.getElementById('algorithmSelect').addEventListener('change', updatePlaceholder);
+
+    // Инициализация
+    updatePlaceholder();
     drawCoordinateSystem();
 </script>
 </body>
